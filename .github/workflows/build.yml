@@ -16,7 +16,7 @@ jobs:
       - name: Build mod
         uses: geode-sdk/build-geode-mod@main
         with:
-          sdk: v4.20.0
+          sdk: latest
           build-config: RelWithDebInfo
 
       - name: Upload .geode file
