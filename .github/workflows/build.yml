@@ -1,14 +1,27 @@
-- name: Checkout code
-  uses: actions/checkout@v4
+name: Build Auto Dodge Mod
 
-- name: Clean build directory
-  run: |
-    if (Test-Path build) {
-      Remove-Item -Recurse -Force build
-    }
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-- name: Build mod
-  uses: geode-sdk/build-geode-mod@main
-  with:
-    sdk: latest
-    build-config: RelWithDebInfo
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build mod
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          sdk: latest
+          build-config: RelWithDebInfo
+
+      - name: Upload .geode file
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-dodge
+          path: build/**/*.geode
+          if-no-files-found: error
