@@ -1,16 +1,15 @@
 {
     "geode": "5.5.3",
     "gd": {
-    "win": "2.2081",
-    "mac": "2.2081",
-    "android": "2.2081"
-},
+        "win": "2.2081",
+        "mac": "2.2081",
+        "android": "2.2081"
     },
     "id": "yourname.auto-dodge",
     "name": "Auto Dodge",
     "version": "2.0.0",
     "developer": "yourname",
-    "description": "Full trajectory-based auto-dodge: Cube, Ship, Ball, Wave, Robot, Swing. Uses orbs, dash orbs, and pads.",
+    "description": "Full trajectory-based auto-dodge for all game modes.",
     "settings": {
         "enabled": {
             "name": "Enable Auto Dodge",
@@ -19,15 +18,13 @@
         },
         "trajectory-steps": {
             "name": "Trajectory Simulation Steps",
-            "description": "How many frames ahead to simulate (60 = 1 second). Higher = smarter but heavier.",
             "type": "int",
             "default": 90,
             "min": 30,
             "max": 240
         },
         "look-ahead-px": {
-            "name": "Initial Look-Ahead (px)",
-            "description": "Quick scan range for immediate hazards before trajectory kicks in.",
+            "name": "Look-Ahead Distance",
             "type": "float",
             "default": 80.0,
             "min": 20.0,
@@ -35,56 +32,21 @@
         },
         "use-orbs": {
             "name": "Use Jump Orbs",
-            "description": "Click yellow/pink/red/green orbs when trajectory says it helps.",
             "type": "bool",
             "default": true
         },
         "use-dash-orbs": {
             "name": "Use Dash Orbs",
-            "description": "Activate dash orbs when they lead to a safe trajectory.",
             "type": "bool",
             "default": true
         },
-        "mode-cube": {
-            "name": "Enable: Cube",
-            "type": "bool",
-            "default": true
-        },
-        "mode-ship": {
-            "name": "Enable: Ship",
-            "type": "bool",
-            "default": true
-        },
-        "mode-ball": {
-            "name": "Enable: Ball",
-            "type": "bool",
-            "default": true
-        },
-        "mode-wave": {
-            "name": "Enable: Wave",
-            "type": "bool",
-            "default": true
-        },
-        "mode-robot": {
-            "name": "Enable: Robot",
-            "type": "bool",
-            "default": true
-        },
-        "mode-swing": {
-            "name": "Enable: Swing",
-            "type": "bool",
-            "default": true
-        },
-        "show-overlay": {
-            "name": "Show HUD Overlay",
-            "type": "bool",
-            "default": true
-        },
-        "show-trajectory": {
-            "name": "Show Trajectory Debug",
-            "description": "Draw the simulated trajectory as dots (debug).",
-            "type": "bool",
-            "default": false
-        }
+        "mode-cube": { "name": "Enable: Cube", "type": "bool", "default": true },
+        "mode-ship": { "name": "Enable: Ship", "type": "bool", "default": true },
+        "mode-ball": { "name": "Enable: Ball", "type": "bool", "default": true },
+        "mode-wave": { "name": "Enable: Wave", "type": "bool", "default": true },
+        "mode-robot": { "name": "Enable: Robot", "type": "bool", "default": true },
+        "mode-swing": { "name": "Enable: Swing", "type": "bool", "default": true },
+        "show-overlay": { "name": "Show HUD Overlay", "type": "bool", "default": true },
+        "show-trajectory": { "name": "Show Trajectory Debug", "type": "bool", "default": false }
     }
 }
