@@ -146,8 +146,8 @@ static SimState buildSimState(PlayerObject* player, GDMode mode) {
     SimState s;
     s.x           = player->getPositionX();
     s.y           = player->getPositionY();
-    s.vx          = player->m_xVelocity;
-    s.vy          = player->m_yVelocity;
+    s.vx = player->m_playerSpeed;
+    s.vy = 0.f;
     s.gravFlipped = player->m_isUpsideDown;
     s.onGround    = player->m_isOnGround;
     s.buttonHeld  = g_rt.syntheticHeld;
@@ -414,7 +414,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
         // ── Decide input BEFORE physics runs this frame ───────────────────────
         if (cfg_enabled()
             && this->m_player1
-            && !this->m_isDead
+            && !this->m_player1->m_isDead
             && !this->m_isPaused)
         {
             processAutoDodge();
@@ -425,7 +425,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
     void processAutoDodge() {
         PlayerObject* player = this->m_player1;
-        GDMode mode = static_cast<GDMode>((int)this->m_gamemode);
+        GDMode mode = static_cast<GDMode>((int)this->m_gameMode);
 
         if (!cfg_modeEnabled(mode)) {
             // Release any held input and bail
@@ -524,20 +524,6 @@ class $modify(AutoDodgeLayer, PlayLayer) {
     }
 
     // ── Death / quit cleanup ──────────────────────────────────────────────────
-    void playerDied(PlayerObject* player) {
-        if (player == this->m_player1) {
-            if (g_rt.syntheticHeld) {
-                this->handleButton(false, 1, false);
-                g_rt.syntheticHeld = false;
-            }
-            g_rt.orbClickPending = false;
-            g_rt.robotChargeFrames = 0;
-            g_rt.jumpCooldown = 0;
-            g_rt.clearDebugDots();
-        }
-        PlayLayer::playerDied(player);
-    }
-
     void onQuit() {
         if (g_rt.syntheticHeld)
             this->handleButton(false, 1, false);
