@@ -40,53 +40,35 @@ struct OrbDecision {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Trajectory Engine
 // ─────────────────────────────────────────────────────────────────────────────
-namespace Trajectory {
+inline std::vector<SceneObject> buildSceneSnapshot(
+    CCArray* objectLayerChildren,
+    float playerX,
+    float scanWidth)
+{
+    std::vector<SceneObject> scene;
+    if (!objectLayerChildren) return scene;
 
-    // Build a lightweight snapshot of all relevant objects in the scene.
-    // Only objects within [playerX, playerX + scanWidth] are included.
-    inline std::vector<SceneObject> buildSceneSnapshot(
-        CCArray* objectLayerChildren,
-        float playerX,
-        float scanWidth)
-    {
-        std::vector<SceneObject> scene;
-        if (!objectLayerChildren) return scene;
+    for (auto raw : CCArrayExt<CCObject*>(objectLayerChildren)) {
+        auto go = dynamic_cast<GameObject*>(raw);
+        if (!go || !go->isVisible()) continue;
 
-        CCObject* raw = nullptr;
-        CCARRAY_FOREACH(objectLayerChildren, raw) {
-            auto go = dynamic_cast<GameObject*>(raw);
-            if (!go || !go->isVisible()) continue;
+        int id = go->m_objectID;
+        bool lethal   = Hazards::isLethal(id);
+        bool orb      = Hazards::isOrb(id);
+        bool pad      = Hazards::isPad(id);
+        bool dashOrb  = Hazards::isDashOrb(id);
 
-            int id = go->m_objectID;
-            bool lethal   = Hazards::isLethal(id);
-            bool orb      = Hazards::isOrb(id);
-            bool pad      = Hazards::isPad(id);
-            bool dashOrb  = Hazards::isDashOrb(id);
+        if (!lethal && !orb && !pad) continue;
 
-            if (!lethal && !orb && !pad) continue;
+        CCRect bb = go->boundingBox();
+        float objRight = bb.getMaxX();
+        float objLeft  = bb.getMinX();
+        if (objRight < playerX || objLeft > playerX + scanWidth) continue;
 
-            CCRect bb = go->boundingBox();
-
-            // Only include objects ahead of the player (within scan width)
-            float objRight = bb.getMaxX();
-            float objLeft  = bb.getMinX();
-            if (objRight < playerX || objLeft > playerX + scanWidth) continue;
-
-            scene.push_back({ id, bb, lethal, orb, pad, dashOrb });
-        }
-        return scene;
+        scene.push_back({ id, bb, lethal, orb, pad, dashOrb });
     }
-
-    // Apply a pad effect to a SimState (pads trigger automatically)
-    inline SimState applyPad(SimState s, const Hazards::PadInfo& pad) {
-        s.vy = pad.vyOverride * (s.gravFlipped ? -1.f : 1.f);
-        if (pad.flipGrav) {
-            s.gravFlipped = !s.gravFlipped;
-            s.vy = -s.vy;
-        }
-        s.onGround = false;
-        return s;
-    }
+    return scene;
+}
 
     // Apply an orb effect to a SimState (orb triggered by click)
     inline SimState applyOrb(SimState s, const Hazards::OrbInfo& orb) {
