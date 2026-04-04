@@ -3,100 +3,93 @@
 #include <Geode/Geode.hpp>
 #include <functional>
 #include <vector>
-#include <optional>
 
 using namespace cocos2d;
+using namespace geode::cocos;
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  SceneObject – lightweight snapshot of a relevant game object
-// ─────────────────────────────────────────────────────────────────────────────
 struct SceneObject {
     int    id;
-    CCRect worldRect;          // bounding box in world (object-layer) space
+    CCRect worldRect;
     bool   lethal;
     bool   isOrb;
     bool   isPad;
     bool   isDashOrb;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  TrajectoryResult
-// ─────────────────────────────────────────────────────────────────────────────
 struct TrajectoryResult {
-    bool   died = false;                  // does this trajectory hit a lethal?
-    int    deathFrame = -1;               // frame index where death occurs
-    std::vector<SimState> states;         // full path
+    bool   died = false;
+    int    deathFrame = -1;
+    std::vector<SimState> states;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  OrbDecision – answer from evaluateOrb()
-// ─────────────────────────────────────────────────────────────────────────────
 struct OrbDecision {
     bool   shouldClick = false;
     int    orbObjectId = -1;
-    float  activationX = 0.f;   // world X where we should be when clicking
+    float  activationX = 0.f;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Trajectory Engine
-// ─────────────────────────────────────────────────────────────────────────────
-inline std::vector<SceneObject> buildSceneSnapshot(
-    CCArray* objectLayerChildren,
-    float playerX,
-    float scanWidth)
-{
-    std::vector<SceneObject> scene;
-    if (!objectLayerChildren) return scene;
+namespace Trajectory {
 
-    for (auto raw : CCArrayExt<CCObject*>(objectLayerChildren)) {
-        auto go = dynamic_cast<GameObject*>(raw);
-        if (!go || !go->isVisible()) continue;
+    inline std::vector<SceneObject> buildSceneSnapshot(
+        CCArray* objectLayerChildren,
+        float playerX,
+        float scanWidth)
+    {
+        std::vector<SceneObject> scene;
+        if (!objectLayerChildren) return scene;
 
-        int id = go->m_objectID;
-        bool lethal   = Hazards::isLethal(id);
-        bool orb      = Hazards::isOrb(id);
-        bool pad      = Hazards::isPad(id);
-        bool dashOrb  = Hazards::isDashOrb(id);
+        for (auto* raw : CCArrayExt<CCObject*>(objectLayerChildren)) {
+            auto go = dynamic_cast<GameObject*>(raw);
+            if (!go || !go->isVisible()) continue;
 
-        if (!lethal && !orb && !pad) continue;
+            int id = go->m_objectID;
+            bool lethal  = Hazards::isLethal(id);
+            bool orb     = Hazards::isOrb(id);
+            bool pad     = Hazards::isPad(id);
+            bool dashOrb = Hazards::isDashOrb(id);
 
-        CCRect bb = go->boundingBox();
-        float objRight = bb.getMaxX();
-        float objLeft  = bb.getMinX();
-        if (objRight < playerX || objLeft > playerX + scanWidth) continue;
+            if (!lethal && !orb && !pad) continue;
 
-        scene.push_back({ id, bb, lethal, orb, pad, dashOrb });
+            CCRect bb = go->boundingBox();
+            float objRight = bb.getMaxX();
+            float objLeft  = bb.getMinX();
+            if (objRight < playerX || objLeft > playerX + scanWidth) continue;
+
+            scene.push_back({ id, bb, lethal, orb, pad, dashOrb });
+        }
+        return scene;
     }
-    return scene;
-}
 
-    // Apply an orb effect to a SimState (orb triggered by click)
-    inline SimState applyOrb(SimState s, const Hazards::OrbInfo& orb) {
-        if (orb.flipGrav) {
+    inline SimState applyPad(SimState s, const Hazards::PadInfo& pad) {
+        s.vy = pad.vyOverride * (s.gravFlipped ? -1.f : 1.f);
+        if (pad.flipGrav) {
             s.gravFlipped = !s.gravFlipped;
+            s.vy = -s.vy;
         }
-        if (orb.vyOverride != 0.f) {
+        s.onGround = false;
+        return s;
+    }
+
+    inline SimState applyOrb(SimState s, const Hazards::OrbInfo& orb) {
+        if (orb.flipGrav) s.gravFlipped = !s.gravFlipped;
+        if (orb.vyOverride != 0.f)
             s.vy = orb.vyOverride * (s.gravFlipped ? -1.f : 1.f);
-        }
         if (orb.dashVX != 0.f) {
             s.vx = orb.dashVX;
             s.dashing = true;
-            s.dashFrames = 12; // dash lasts ~12 frames
+            s.dashFrames = 12;
         }
         s.onGround = false;
         s.usedOrb = true;
         return s;
     }
 
-    // ── Core trajectory simulator ─────────────────────────────────────────────
-    // inputFn(frame) → {press, held, release} for that frame.
-    // Automatically applies pads on contact and optionally orbs.
     inline TrajectoryResult simulate(
-        SimState                            initial,
-        int                                 steps,
-        const std::vector<SceneObject>&     scene,
-        std::function<bool(int /*frame*/)>  heldFn,
-        bool                                clickOrbsAutomatically = false)
+        SimState                           initial,
+        int                                steps,
+        const std::vector<SceneObject>&    scene,
+        std::function<bool(int)>           heldFn,
+        bool                               clickOrbsAutomatically = false)
     {
         TrajectoryResult result;
         result.states.reserve(steps);
@@ -110,7 +103,6 @@ inline std::vector<SceneObject> buildSceneSnapshot(
             bool release = !held && prevHeld;
             prevHeld     = held;
 
-            // ── Check pad & orb contacts BEFORE physics step ─────────────────
             CCRect playerBox = stateHitbox(s);
 
             for (const auto& obj : scene) {
@@ -120,11 +112,9 @@ inline std::vector<SceneObject> buildSceneSnapshot(
                     auto it = Hazards::PADS.find(obj.id);
                     if (it != Hazards::PADS.end()) {
                         s = applyPad(s, it->second);
-                        // Recalculate press/held/release after pad
                         press = false; held = s.buttonHeld; release = false;
                     }
                 }
-
                 if (clickOrbsAutomatically && obj.isOrb && !s.usedOrb) {
                     auto it = Hazards::ORBS.find(obj.id);
                     if (it != Hazards::ORBS.end()) {
@@ -132,75 +122,54 @@ inline std::vector<SceneObject> buildSceneSnapshot(
                         press = false; release = false;
                     }
                 }
-
                 if (obj.lethal) {
                     s.dead = true;
-                    result.died      = true;
+                    result.died = true;
                     result.deathFrame = f;
                     result.states.push_back(s);
                     return result;
                 }
             }
 
-            // ── Dash ──────────────────────────────────────────────────────────
             if (s.dashing) {
                 s.x += s.vx;
                 s.dashFrames--;
                 if (s.dashFrames <= 0) {
                     s.dashing = false;
-                    s.vx = initial.vx; // restore normal x speed
+                    s.vx = initial.vx;
                 }
                 result.states.push_back(s);
                 continue;
             }
 
-            // ── Advance physics ───────────────────────────────────────────────
             s = stepPhysics(s, press, held, release);
             result.states.push_back(s);
         }
-
         return result;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Evaluate whether clicking a specific orb now leads to a safe path.
-    //  Returns OrbDecision::shouldClick = true if the orb saves us.
-    // ─────────────────────────────────────────────────────────────────────────
     inline OrbDecision evaluateOrbs(
         const SimState&                  startState,
         int                              steps,
         const std::vector<SceneObject>&  scene,
         const std::function<bool(int)>&  normalHeldFn)
     {
-        // First check the "do nothing special with orbs" trajectory
         auto baseResult = simulate(startState, steps, scene, normalHeldFn, false);
-
-        // If base is already safe, no need to use any orb
         if (!baseResult.died) return {};
 
-        // Try clicking each orb in range
         for (const auto& obj : scene) {
             if (!obj.isOrb) continue;
             auto orbIt = Hazards::ORBS.find(obj.id);
             if (orbIt == Hazards::ORBS.end()) continue;
 
-            // Simulate: apply the orb effect right now (at frame 0)
-            SimState boosted = startState;
-            boosted = applyOrb(boosted, orbIt->second);
-
+            SimState boosted = applyOrb(startState, orbIt->second);
             auto boostedResult = simulate(boosted, steps, scene, normalHeldFn, false);
 
             if (!boostedResult.died) {
-                // This orb click saves us
-                return OrbDecision{
-                    true,
-                    obj.id,
-                    obj.worldRect.getMidX()
-                };
+                return OrbDecision{ true, obj.id, obj.worldRect.getMidX() };
             }
         }
-
-        return {}; // nothing helped
+        return {};
     }
 
 } // namespace Trajectory
