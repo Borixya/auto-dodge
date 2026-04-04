@@ -425,7 +425,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
     void processAutoDodge() {
         PlayerObject* player = this->m_player1;
-        GDMode mode = GDMode::Cube; // mode detection via bindings TBD
+        GDMode mode = static_cast<GDMode>((int)this->m_level->m_gameMode);
         if (!cfg_modeEnabled(mode)) {
             // Release any held input and bail
             if (g_rt.syntheticHeld) {
@@ -438,7 +438,15 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
         // ── Snapshot the scene ────────────────────────────────────────────────
         float scanWidth = cfg_lookAhead()
-            + static_cast<float>(cfg_steps()) * 9.09f;
+            + static_cast<float>(cfg_steps()) * [this]() -> float {
+    switch (this->m_level->m_speed) {
+        case Speed::Slow:    return 8.36f;
+        case Speed::Fast:    return 10.09f;
+        case Speed::Faster:  return 11.36f;
+        case Speed::Fastest: return 12.72f;
+        default:             return 9.09f;
+    }
+}();
 
         CCArray* children = this->m_objectLayer
                             ? this->m_objectLayer->getChildren()
