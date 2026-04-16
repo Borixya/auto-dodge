@@ -425,7 +425,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
     void processAutoDodge() {
         PlayerObject* player = this->m_player1;
-        GDMode mode = static_cast<GDMode>((int)this->m_level->m_startMode);
+        GDMode mode = static_cast<GDMode>((int)this->m_player1->m_gamemode);
         if (!cfg_modeEnabled(mode)) {
             // Release any held input and bail
             if (g_rt.syntheticHeld) {
@@ -438,7 +438,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
         // ── Snapshot the scene ────────────────────────────────────────────────
         float scanWidth = cfg_lookAhead()
-            + static_cast<float>(cfg_steps()) * [this]() -> float {
+            + static_cast<float>(cfg_steps()) * std::abs(this->m_player1->m_playerSpeed);
     switch (this->m_level->m_startSpeed) {
         case Speed::Slow:    return 8.36f;
         case Speed::Fast:    return 10.09f;
@@ -522,7 +522,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
         // ── Draw trajectory debug ──────────────────────────────────────────────
         if (cfg_showTraj() && this->m_objectLayer) {
             auto debugTraj = Trajectory::simulate(state, cfg_steps(), scene,
-                [hold = dec.hold](int) -> bool { return hold; }, false);
+                [heldVal = dec.hold](int) -> bool { return heldVal; }, false);
             drawTrajectoryDots(this->m_objectLayer, debugTraj.states, debugTraj.died);
         }
 
