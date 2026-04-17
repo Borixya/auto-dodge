@@ -425,7 +425,10 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
     void processAutoDodge() {
         PlayerObject* player = this->m_player1;
-        GDMode mode = static_cast<GDMode>((int)this->m_player1->m_gamemode);
+        
+        // FIX: Changed m_gamemode to m_gameMode (capital M)
+        GDMode mode = static_cast<GDMode>((int)this->m_player1->m_gameMode);
+        
         if (!cfg_modeEnabled(mode)) {
             // Release any held input and bail
             if (g_rt.syntheticHeld) {
@@ -439,14 +442,9 @@ class $modify(AutoDodgeLayer, PlayLayer) {
         // ── Snapshot the scene ────────────────────────────────────────────────
         float scanWidth = cfg_lookAhead()
             + static_cast<float>(cfg_steps()) * std::abs(this->m_player1->m_playerSpeed);
-    switch (this->m_level->m_startSpeed) {
-        case Speed::Slow:    return 8.36f;
-        case Speed::Fast:    return 10.09f;
-        case Speed::Faster:  return 11.36f;
-        case Speed::Fastest: return 12.72f;
-        default:             return 9.09f;
-    }
-}();
+
+        // FIX: The broken `switch(this->m_level->m_startSpeed)` and `}();` block was completely removed. 
+        // It was invalid syntax returning floats in a void function, and `m_playerSpeed` already handles the speed correctly.
 
         CCArray* children = this->m_objectLayer
                             ? this->m_objectLayer->getChildren()
@@ -561,7 +559,7 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Entry point
 // ─────────────────────────────────────────────────────────────────────────────
-$on_mod(Loaded) {
+ $on_mod(Loaded) {
     log::info("[AutoDodge v2.0] Loaded – GD 2.2074 / Geode 4.20");
     log::info("  Modes: Cube={} Ship={} Ball={} Wave={} Robot={} Swing={}",
         Mod::get()->getSettingValue<bool>("mode-cube"),
