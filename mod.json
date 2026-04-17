@@ -1,5 +1,5 @@
 {
-    "geode": "5.5.3",
+   "geode": "5.6.1",
     "gd": {
         "win": "2.2081",
         "mac": "2.2081",
@@ -8,7 +8,7 @@
     "id": "yourname.auto-dodge",
     "name": "Auto Dodge",
     "version": "2.0.0",
-    "developer": "yourname",
+    "developer": "Borixya",
     "description": "Full trajectory-based auto-dodge for all game modes.",
     "settings": {
         "enabled": {
