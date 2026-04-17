@@ -426,8 +426,8 @@ class $modify(AutoDodgeLayer, PlayLayer) {
     void processAutoDodge() {
         PlayerObject* player = this->m_player1;
         
-        // FIX: Changed m_gamemode to m_gameMode (capital M)
-        GDMode mode = static_cast<GDMode>((int)this->m_player1->m_gameMode);
+        // FIX: Game mode is stored on PlayLayer (GJBaseGameLayer), not PlayerObject
+        GDMode mode = static_cast<GDMode>((int)this->m_gameMode);
         
         if (!cfg_modeEnabled(mode)) {
             // Release any held input and bail
@@ -442,9 +442,6 @@ class $modify(AutoDodgeLayer, PlayLayer) {
         // ── Snapshot the scene ────────────────────────────────────────────────
         float scanWidth = cfg_lookAhead()
             + static_cast<float>(cfg_steps()) * std::abs(this->m_player1->m_playerSpeed);
-
-        // FIX: The broken `switch(this->m_level->m_startSpeed)` and `}();` block was completely removed. 
-        // It was invalid syntax returning floats in a void function, and `m_playerSpeed` already handles the speed correctly.
 
         CCArray* children = this->m_objectLayer
                             ? this->m_objectLayer->getChildren()
@@ -519,8 +516,9 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
         // ── Draw trajectory debug ──────────────────────────────────────────────
         if (cfg_showTraj() && this->m_objectLayer) {
+            // FIX: Simplified lambda capture to prevent PCH/compiler clashes
             auto debugTraj = Trajectory::simulate(state, cfg_steps(), scene,
-                [heldVal = dec.hold](int) -> bool { return heldVal; }, false);
+                [&](int) -> bool { return dec.hold; }, false);
             drawTrajectoryDots(this->m_objectLayer, debugTraj.states, debugTraj.died);
         }
 
