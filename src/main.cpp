@@ -140,6 +140,20 @@ static void drawTrajectoryDots(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  Safely get GDMode from PlayerObject (works across all GD versions)
+// ─────────────────────────────────────────────────────────────────────────────
+static GDMode getGDMode(PlayerObject* player) {
+    if (player->m_isShip)   return GDMode::Ship;
+    if (player->m_isBall)   return GDMode::Ball;
+    if (player->m_isBird)   return GDMode::UFO;     // Bird is UFO internally
+    if (player->m_isDart)   return GDMode::Wave;    // Dart is Wave internally
+    if (player->m_isRobot)  return GDMode::Robot;
+    if (player->m_isSwing)  return GDMode::Swing;
+    if (player->m_isSpider) return GDMode::Spider;
+    return GDMode::Cube;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  Build SimState from live PlayerObject
 // ─────────────────────────────────────────────────────────────────────────────
 static SimState buildSimState(PlayerObject* player, GDMode mode) {
@@ -426,8 +440,9 @@ class $modify(AutoDodgeLayer, PlayLayer) {
     void processAutoDodge() {
         PlayerObject* player = this->m_player1;
         
-        // FIX: Game mode is stored on PlayLayer (GJBaseGameLayer), not PlayerObject
-        GDMode mode = static_cast<GDMode>((int)this->m_gameMode);
+        // FIX: Safely detect mode using standard PlayerObject booleans
+        // which are guaranteed to exist in GD 2.2081+
+        GDMode mode = getGDMode(player);
         
         if (!cfg_modeEnabled(mode)) {
             // Release any held input and bail
@@ -516,7 +531,6 @@ class $modify(AutoDodgeLayer, PlayLayer) {
 
         // ── Draw trajectory debug ──────────────────────────────────────────────
         if (cfg_showTraj() && this->m_objectLayer) {
-            // FIX: Simplified lambda capture to prevent PCH/compiler clashes
             auto debugTraj = Trajectory::simulate(state, cfg_steps(), scene,
                 [&](int) -> bool { return dec.hold; }, false);
             drawTrajectoryDots(this->m_objectLayer, debugTraj.states, debugTraj.died);
