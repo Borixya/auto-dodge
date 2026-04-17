@@ -1,4 +1,4 @@
-# Auto Dodge v2.0 — Geode Mod for GD 2.2074
+# Auto Dodge v2.0 — Geode Mod for GD 2.2081
 
 Full trajectory-based auto-dodge with multi-mode support, orb/pad integration,
 dash orbs, and a configurable per-mode HUD.
